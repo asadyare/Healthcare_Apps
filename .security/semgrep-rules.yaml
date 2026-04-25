@@ -1,0 +1,20 @@
+﻿rules:
+  - id: nodejs-ssrf-detect-fetch
+    patterns:
+      - pattern: fetch($URL)
+      - pattern-not: fetch("...")
+    message: "Potential SSRF risk. Validate and allowlist outbound target URLs."
+    languages: [javascript, typescript]
+    severity: WARNING
+
+  - id: weak-jwt-secret-env-default
+    pattern: process.env.JWT_SECRET || "..."
+    message: "Avoid fallback JWT secrets; require explicit secret from runtime."
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  - id: express-cors-open
+    pattern: app.use(cors({ origin: true, credentials: true }))
+    message: "Open CORS origin allows broad cross-origin access; restrict in production."
+    languages: [javascript, typescript]
+    severity: WARNING

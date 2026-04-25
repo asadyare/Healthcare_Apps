@@ -1,0 +1,6 @@
+﻿[allowlist]
+description = "Allow placeholders and docs examples"
+paths = [
+  '''docs/''',
+  '''.security/'''
+]

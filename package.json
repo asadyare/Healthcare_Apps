@@ -5,7 +5,12 @@
   "scripts": {
     "dev:medtrack": "concurrently \"npm run dev -w apps/medtrack-pro/server\" \"npm run dev -w apps/medtrack-pro/client\"",
     "dev:careconnect": "concurrently \"npm run dev -w apps/care-connect-360/server\" \"npm run dev -w apps/care-connect-360/client\"",
-    "dev:healthhub": "concurrently \"npm run dev -w apps/healthhub-mobile/server\" \"npm run dev -w apps/healthhub-mobile/client\""
+    "dev:healthhub": "concurrently \"npm run dev -w apps/healthhub-mobile/server\" \"npm run dev -w apps/healthhub-mobile/client\"",
+    "scan:secrets": "docker run --rm -v ${PWD}:/work zricethezav/gitleaks:latest detect --source /work --config /work/.security/gitleaks.toml",
+    "scan:sast": "docker run --rm -v ${PWD}:/src returntocorp/semgrep semgrep --config auto --config /src/.security/semgrep-rules.yaml /src",
+    "scan:sca": "npm audit --omit=dev --audit-level=critical",
+    "scan:iac": "docker run --rm -v ${PWD}:/tf bridgecrew/checkov:latest -d /tf/infra/terraform -d /tf/k8s/base --config-file /tf/.security/checkov.yaml",
+    "scan:fs": "docker run --rm -v ${PWD}:/project aquasec/trivy:latest fs --severity HIGH,CRITICAL --exit-code 1 /project"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
