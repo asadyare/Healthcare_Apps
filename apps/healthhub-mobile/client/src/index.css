@@ -1,0 +1,13 @@
+:root {
+  --bg: #f0f4f8;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --muted: #64748b;
+  --accent: #059669;
+  --accent-dim: #047857;
+  --success: #10b981;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }

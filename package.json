@@ -1,0 +1,21 @@
+{
+  "name": "healthcare-apps",
+  "private": true,
+  "description": "CareConnect360, HealthHub Mobile, MedTrack Pro - integrated healthcare apps",
+  "scripts": {
+    "dev:medtrack": "concurrently \"npm run dev -w apps/medtrack-pro/server\" \"npm run dev -w apps/medtrack-pro/client\"",
+    "dev:careconnect": "concurrently \"npm run dev -w apps/care-connect-360/server\" \"npm run dev -w apps/care-connect-360/client\"",
+    "dev:healthhub": "concurrently \"npm run dev -w apps/healthhub-mobile/server\" \"npm run dev -w apps/healthhub-mobile/client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "workspaces": [
+    "apps/medtrack-pro/client",
+    "apps/medtrack-pro/server",
+    "apps/care-connect-360/client",
+    "apps/care-connect-360/server",
+    "apps/healthhub-mobile/client",
+    "apps/healthhub-mobile/server"
+  ]
+}
