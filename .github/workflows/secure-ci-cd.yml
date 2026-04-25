@@ -1,0 +1,194 @@
+﻿name: secure-ci-cd
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: "Environment to deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+      confirm_deploy:
+        description: "Type DEPLOY to confirm deployment"
+        required: true
+        default: "NO"
+
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_PREFIX: healthcare
+
+jobs:
+  security-gates:
+    name: Security Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .security/gitleaks.toml
+
+      - name: Secret scan (trufflehog)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --results=verified,unknown --fail
+
+      - name: SAST (semgrep)
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            auto
+            .security/semgrep-rules.yaml
+
+      - name: SCA (npm audit)
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: IaC scan (checkov)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          config_file: .security/checkov.yaml
+          framework: terraform,kubernetes
+          soft_fail: false
+
+      - name: Filesystem vuln scan (trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  terraform-validate:
+    name: Terraform Validate and Plan
+    runs-on: ubuntu-latest
+    needs: security-gates
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        working-directory: infra/terraform
+        run: terraform init -backend=false
+
+      - name: Terraform validate
+        working-directory: infra/terraform
+        run: terraform validate
+
+      - name: Terraform plan
+        if: github.event_name != 'pull_request'
+        working-directory: infra/terraform
+        run: terraform plan -out tfplan
+
+      - name: Upload plan artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: infra/terraform/tfplan
+
+  build-and-scan-images:
+    name: Build and Scan Service Images
+    runs-on: ubuntu-latest
+    needs: security-gates
+    strategy:
+      matrix:
+        service:
+          - care-connect-360
+          - medtrack-pro
+          - healthhub-mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build container image
+        run: |
+          docker build \
+            -t ${{ matrix.service }}:${{ github.sha }} \
+            apps/${{ matrix.service }}/server
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ matrix.service }}:${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  pre-deploy-double-check:
+    name: Final Pre-Deploy Double Check
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.deploy_environment }}
+    runs-on: ubuntu-latest
+    needs: [terraform-validate, build-and-scan-images]
+    steps:
+      - name: Confirm manual deployment approval
+        run: |
+          if [ "${{ github.event.inputs.confirm_deploy }}" != "DEPLOY" ]; then
+            echo "Deployment confirmation failed. Type DEPLOY to continue."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+
+      - name: Kubernetes dry-run validation
+        run: kubectl apply --dry-run=server -f k8s/base/microservices.yaml
+
+      - name: Kubernetes diff review
+        run: kubectl diff -f k8s/base/microservices.yaml || true
+
+      - name: Apply Kubernetes manifests
+        run: kubectl apply -f k8s/base/microservices.yaml
+
+      - name: Rollout status verification
+        run: |
+          kubectl rollout status deployment/care-connect-360 -n healthcare --timeout=180s
+          kubectl rollout status deployment/medtrack-pro -n healthcare --timeout=180s
+          kubectl rollout status deployment/healthhub-mobile -n healthcare --timeout=180s
