@@ -13,7 +13,7 @@
 param(
   [string]$GitHubOrg = "asadyare",
   [string]$GitHubRepo = "Healthcare_Apps",
-  [string]$Region = "eu-west-1",
+  [string]$Region = "us-east-1",
   [string]$RoleName = "github-actions-healthcare-deploy"
 )
 

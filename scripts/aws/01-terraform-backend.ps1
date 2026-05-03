@@ -8,7 +8,7 @@
   Then ensure infra/terraform/versions.tf backend block matches bucket, key, region, dynamodb_table.
 #>
 param(
-  [string]$Region = "eu-west-1",
+  [string]$Region = "us-east-1",
   [string]$BucketName = "healthcare-apps-tf-state",
   [string]$LockTable = "healthcare-apps-tf-locks"
 )

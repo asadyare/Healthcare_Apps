@@ -5,13 +5,13 @@
   Run AFTER: terraform apply has created the cluster and 02-github-oidc-deploy-role.ps1 has run.
 
 .USAGE
-  .\03-eks-grant-github-deploy-access.ps1 -ClusterName healthcare-apps-eks -Region eu-west-1 `
+  .\03-eks-grant-github-deploy-access.ps1 -ClusterName healthcare-apps-eks -Region us-east-1 `
     -RoleArn "arn:aws:iam::123456789012:role/github-actions-healthcare-deploy"
 #>
 param(
   [Parameter(Mandatory = $true)][string]$ClusterName,
   [Parameter(Mandatory = $true)][string]$RoleArn,
-  [string]$Region = "eu-west-1"
+    [string]$Region = "us-east-1"
 )
 
 $ErrorActionPreference = "Stop"

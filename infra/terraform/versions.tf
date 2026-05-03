@@ -14,7 +14,7 @@
     # TODO: Replace with your state key path
     key            = "eks/terraform.tfstate"
     # TODO: Replace with your AWS region
-    region         = "eu-west-1"
+    region         = "us-east-1"
     encrypt        = true
     dynamodb_table = "healthcare-apps-tf-locks"
   }

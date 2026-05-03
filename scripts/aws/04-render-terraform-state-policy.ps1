@@ -7,7 +7,7 @@
     -OutFile .\terraform-state-policy.rendered.json
 #>
 param(
-  [string]$Region = "eu-west-1",
+  [string]$Region = "us-east-1",
   [string]$BucketName = "healthcare-apps-tf-state",
   [string]$LockTable = "healthcare-apps-tf-locks",
   [string]$OutFile = "$PSScriptRoot\terraform-state-policy.rendered.json"
