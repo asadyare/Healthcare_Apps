@@ -209,6 +209,9 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
+      - name: Ensure Kubernetes namespace
+        run: kubectl create namespace healthcare --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Kubernetes dry-run validation
         run: kubectl apply --dry-run=server -f k8s/base/microservices.yaml
 
