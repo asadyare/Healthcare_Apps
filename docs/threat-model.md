@@ -59,3 +59,11 @@
 - Quarterly threat model refresh
 - Incident postmortems with corrective actions
 - Vulnerability remediation SLA: Critical 24h, High 7d
+
+---
+
+## Related documentation
+
+- [Threat model & risk analysis (HIPAA-oriented qualitative)](./threat-model-risk-analysis.md)
+- [Infrastructure and security](./infrastructure-and-security.md)
+- [Case study: incidents, CI/CD evidence](./case-study/README.md)

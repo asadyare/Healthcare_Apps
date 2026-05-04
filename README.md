@@ -30,7 +30,7 @@ This installs dependencies for all six packages (client + server for each app).
 
 ### 2. Run all three apps
 
-***Option A – Run each app in its own terminal**
+**Option A – Run each app in its own terminal**
 
 ```bash
 # Terminal 1 – MedTrack Pro
@@ -86,3 +86,18 @@ Copy `.env.example` to `.env` in each server directory (or set in the environmen
 
 - Each server stores data in `apps/<app>/server/data/` (SQLite). No Docker or external DB required for local run.
 - For production, the design docs specify MariaDB (CareConnect360), PostgreSQL (MedTrack Pro), and MongoDB (HealthHub); replace the SQLite layer with the appropriate driver and connection string.
+
+---
+
+## Security, threat model, and case study
+
+| Document | Purpose |
+|----------|---------|
+| [docs/threat-model.md](docs/threat-model.md) | STRIDE matrix and SDLC security requirements |
+| [docs/threat-model-risk-analysis.md](docs/threat-model-risk-analysis.md) | Trust boundaries, top risks, HIPAA-oriented qualitative analysis |
+| [docs/infrastructure-and-security.md](docs/infrastructure-and-security.md) | Terraform (VPC, EKS, KMS, flow logs), Kubernetes hardening, CI gates |
+| [docs/sdlc-security-baseline.md](docs/sdlc-security-baseline.md) | Release gates and evidence to retain |
+| [docs/github-actions-setup.md](docs/github-actions-setup.md) | Required GitHub secrets and branch protection |
+| [docs/case-study/README.md](docs/case-study/README.md) | **Start here** — portfolio narrative, architecture, controls, pipeline, **incident log with proof pointers** |
+
+Local security scans (Docker): see root `package.json` scripts `scan:secrets`, `scan:sast`, `scan:sca`, `scan:iac`, `scan:fs`.
