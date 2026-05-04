@@ -26,7 +26,7 @@ permissions:
   id-token: write
 
 env:
-  AWS_REGION: eu-west-1
+  AWS_REGION: us-east-1
   ECR_PREFIX: healthcare
 
 jobs:
@@ -126,6 +126,18 @@ jobs:
       - name: Terraform validate
         working-directory: infra/terraform
         run: terraform validate
+
+      - name: Configure AWS Credentials (OIDC)
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+
+      - name: Terraform init backend
+        if: github.event_name != 'pull_request'
+        working-directory: infra/terraform
+        run: terraform init -reconfigure
 
       - name: Terraform plan
         if: github.event_name != 'pull_request'
