@@ -1,4 +1,4 @@
-﻿name: secure-ci-cd
+name: secure-ci-cd
 
 on:
   pull_request:
@@ -146,7 +146,7 @@ jobs:
 
       - name: Upload plan artifact
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tfplan
           path: infra/terraform/tfplan
