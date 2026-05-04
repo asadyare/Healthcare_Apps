@@ -37,6 +37,8 @@ spec:
           env:
             - name: PORT
               value: "3000"
+            - name: SQLITE_PATH
+              value: /tmp/careconnect.db
           volumeMounts:
             - name: app-secrets
               mountPath: /run/secrets/app
@@ -122,6 +124,8 @@ spec:
           env:
             - name: PORT
               value: "4002"
+            - name: SQLITE_PATH
+              value: /tmp/medtrack.db
           volumeMounts:
             - name: app-secrets
               mountPath: /run/secrets/app
@@ -207,6 +211,8 @@ spec:
           env:
             - name: PORT
               value: "5000"
+            - name: SQLITE_PATH
+              value: /tmp/healthhub.db
           volumeMounts:
             - name: app-secrets
               mountPath: /run/secrets/app
