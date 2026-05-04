@@ -20,17 +20,27 @@ spec:
       labels:
         app: care-connect-360
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api
-          image: 000000000000.dkr.ecr.eu-west-1.amazonaws.com/healthcare/care-connect-360:latest # TODO: replace account/region/tag
+          image: 000000000000.dkr.ecr.us-east-1.amazonaws.com/healthcare/care-connect-360:v0.1.0 # TODO: replace account and release tag
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           env:
             - name: PORT
               value: "3000"
-          envFrom:
-            - secretRef:
-                name: care-connect-360-secrets
+          volumeMounts:
+            - name: app-secrets
+              mountPath: /run/secrets/app
+              readOnly: true
           resources:
             requests:
               cpu: "250m"
@@ -52,8 +62,19 @@ spec:
             periodSeconds: 10
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+      volumes:
+        - name: app-secrets
+          secret:
+            secretName: care-connect-360-secrets
 ---
 apiVersion: v1
 kind: Service
@@ -84,17 +105,27 @@ spec:
       labels:
         app: medtrack-pro
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api
-          image: 000000000000.dkr.ecr.eu-west-1.amazonaws.com/healthcare/medtrack-pro:latest # TODO: replace account/region/tag
+          image: 000000000000.dkr.ecr.us-east-1.amazonaws.com/healthcare/medtrack-pro:v0.1.0 # TODO: replace account and release tag
+          imagePullPolicy: Always
           ports:
             - containerPort: 4002
           env:
             - name: PORT
               value: "4002"
-          envFrom:
-            - secretRef:
-                name: medtrack-pro-secrets
+          volumeMounts:
+            - name: app-secrets
+              mountPath: /run/secrets/app
+              readOnly: true
           resources:
             requests:
               cpu: "250m"
@@ -116,8 +147,19 @@ spec:
             periodSeconds: 10
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+      volumes:
+        - name: app-secrets
+          secret:
+            secretName: medtrack-pro-secrets
 ---
 apiVersion: v1
 kind: Service
@@ -148,17 +190,27 @@ spec:
       labels:
         app: healthhub-mobile
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api
-          image: 000000000000.dkr.ecr.eu-west-1.amazonaws.com/healthcare/healthhub-mobile:latest # TODO: replace account/region/tag
+          image: 000000000000.dkr.ecr.us-east-1.amazonaws.com/healthcare/healthhub-mobile:v0.1.0 # TODO: replace account and release tag
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
           env:
             - name: PORT
               value: "5000"
-          envFrom:
-            - secretRef:
-                name: healthhub-mobile-secrets
+          volumeMounts:
+            - name: app-secrets
+              mountPath: /run/secrets/app
+              readOnly: true
           resources:
             requests:
               cpu: "250m"
@@ -180,8 +232,19 @@ spec:
             periodSeconds: 10
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+      volumes:
+        - name: app-secrets
+          secret:
+            secretName: healthhub-mobile-secrets
 ---
 apiVersion: v1
 kind: Service
