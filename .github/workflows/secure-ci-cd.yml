@@ -93,8 +93,6 @@ jobs:
         with:
           directory: .
           config_file: .security/checkov.yaml
-          framework: terraform,kubernetes
-          soft_fail: false
 
       - name: Filesystem vuln scan (trivy)
         uses: aquasecurity/trivy-action@v0.36.0

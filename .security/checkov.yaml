@@ -1,8 +1,6 @@
-﻿config:
-  soft-fail: false
-  framework:
-    - terraform
-    - kubernetes
-  download-external-modules: true
-  skip-check:
-    - CKV_K8S_43 # image digest pinning handled in CI policy; tags are release-controlled
+framework:
+  - terraform
+  - kubernetes
+download-external-modules: true
+skip-check:
+  - CKV_K8S_43 # image digest pinning handled in CI policy; tags are release-controlled
