@@ -192,6 +192,10 @@ jobs:
         run: |
           ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
           ECR_IMAGE="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_PREFIX}/${{ matrix.service }}:v0.1.0"
+          if aws ecr describe-images --repository-name "${ECR_PREFIX}/${{ matrix.service }}" --image-ids imageTag=v0.1.0 --region "${AWS_REGION}" >/dev/null 2>&1; then
+            echo "ECR image ${ECR_IMAGE} already exists; skipping immutable tag push."
+            exit 0
+          fi
           aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
           docker tag "${{ matrix.service }}:${{ github.sha }}" "${ECR_IMAGE}"
           docker push "${ECR_IMAGE}"
