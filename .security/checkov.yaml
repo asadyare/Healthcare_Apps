@@ -4,3 +4,4 @@ framework:
 download-external-modules: true
 skip-check:
   - CKV_K8S_43 # image digest pinning handled in CI policy; tags are release-controlled
+  - CKV2_AWS_57 # application secrets require service-specific rotation Lambdas outside this base infrastructure module

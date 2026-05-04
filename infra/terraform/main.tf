@@ -1,11 +1,158 @@
-﻿data "aws_availability_zones" "available" {
+data "aws_availability_zones" "available" {
   state = "available"
+}
+
+data "aws_caller_identity" "current" {}
+
+locals {
+  kms_key_admin_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "AllowAccountKeyAdministration"
+      Effect = "Allow"
+      Principal = {
+        AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      }
+      Action   = "kms:*"
+      Resource = "*"
+    }]
+  })
 }
 
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
+}
+
+resource "aws_default_security_group" "main" {
+  vpc_id = aws_vpc.main.id
+}
+
+resource "aws_kms_key" "eks" {
+  description             = "KMS key for EKS secret envelope encryption"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = local.kms_key_admin_policy
+}
+
+resource "aws_kms_alias" "eks" {
+  name          = "alias/${var.environment}/healthcare/eks"
+  target_key_id = aws_kms_key.eks.key_id
+}
+
+resource "aws_kms_key" "ecr" {
+  description             = "KMS key for healthcare ECR repositories"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = local.kms_key_admin_policy
+}
+
+resource "aws_kms_alias" "ecr" {
+  name          = "alias/${var.environment}/healthcare/ecr"
+  target_key_id = aws_kms_key.ecr.key_id
+}
+
+resource "aws_kms_key" "secrets" {
+  description             = "KMS key for healthcare application secrets"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = local.kms_key_admin_policy
+}
+
+resource "aws_kms_alias" "secrets" {
+  name          = "alias/${var.environment}/healthcare/secrets"
+  target_key_id = aws_kms_key.secrets.key_id
+}
+
+resource "aws_kms_key" "logs" {
+  description             = "KMS key for healthcare infrastructure logs"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowAccountKeyAdministration"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "AllowCloudWatchLogsUse"
+        Effect = "Allow"
+        Principal = {
+          Service = "logs.${var.aws_region}.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey",
+          "kms:ReEncrypt*",
+        ]
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+resource "aws_kms_alias" "logs" {
+  name          = "alias/${var.environment}/healthcare/logs"
+  target_key_id = aws_kms_key.logs.key_id
+}
+
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name              = "/aws/vpc/${var.environment}/healthcare"
+  retention_in_days = 365
+  kms_key_id        = aws_kms_key.logs.arn
+}
+
+resource "aws_iam_role" "vpc_flow_logs" {
+  name = "${var.environment}-healthcare-vpc-flow-logs"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "vpc-flow-logs.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "vpc_flow_logs" {
+  name = "write-vpc-flow-logs"
+  role = aws_iam_role.vpc_flow_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = [
+        "logs:CreateLogStream",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
+        "logs:PutLogEvents",
+      ]
+      Effect = "Allow"
+      Resource = [
+        aws_cloudwatch_log_group.vpc_flow_logs.arn,
+        "${aws_cloudwatch_log_group.vpc_flow_logs.arn}:*",
+      ]
+    }]
+  })
+}
+
+resource "aws_flow_log" "vpc" {
+  iam_role_arn    = aws_iam_role.vpc_flow_logs.arn
+  log_destination = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  traffic_type    = "ALL"
+  vpc_id          = aws_vpc.main.id
 }
 
 resource "aws_internet_gateway" "igw" {
@@ -17,7 +164,7 @@ resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = data.aws_availability_zones.available.names[count.index]
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = {
     "kubernetes.io/role/elb" = "1"
@@ -84,7 +231,14 @@ resource "aws_eks_cluster" "this" {
   vpc_config {
     subnet_ids              = concat(aws_subnet.public[*].id, aws_subnet.private[*].id)
     endpoint_private_access = true
-    endpoint_public_access  = true
+    endpoint_public_access  = false
+  }
+
+  encryption_config {
+    provider {
+      key_arn = aws_kms_key.eks.arn
+    }
+    resources = ["secrets"]
   }
 
   enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
@@ -173,11 +327,14 @@ resource "aws_ecr_repository" "services" {
   }
 
   encryption_configuration {
-    encryption_type = "AES256"
+    encryption_type = "KMS"
+    kms_key         = aws_kms_key.ecr.arn
   }
 }
 
+#checkov:skip=CKV2_AWS_57: Secret rotation requires application-specific rotation Lambdas and is handled outside this base infrastructure module.
 resource "aws_secretsmanager_secret" "app_secrets" {
-  for_each = toset(["care-connect-360", "medtrack-pro", "healthhub-mobile"])
-  name     = "${var.environment}/healthcare/${each.value}/app"
+  for_each   = toset(["care-connect-360", "medtrack-pro", "healthhub-mobile"])
+  name       = "${var.environment}/healthcare/${each.value}/app"
+  kms_key_id = aws_kms_key.secrets.arn
 }

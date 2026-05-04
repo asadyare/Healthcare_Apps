@@ -1,4 +1,4 @@
-﻿terraform {
+terraform {
   required_version = ">= 1.6.0"
 
   required_providers {
@@ -10,9 +10,9 @@
 
   backend "s3" {
     # TODO: Replace with your state bucket
-    bucket         = "healthcare-apps-tf-state"
+    bucket = "healthcare-apps-tf-state"
     # TODO: Replace with your state key path
-    key            = "eks/terraform.tfstate"
+    key = "eks/terraform.tfstate"
     # TODO: Replace with your AWS region
     region         = "us-east-1"
     encrypt        = true
