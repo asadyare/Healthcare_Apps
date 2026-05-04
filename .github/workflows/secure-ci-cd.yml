@@ -180,6 +180,22 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+      - name: Configure AWS Credentials (OIDC)
+        if: github.event_name == 'workflow_dispatch'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+
+      - name: Push image to ECR
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          ECR_IMAGE="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_PREFIX}/${{ matrix.service }}:v0.1.0"
+          aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          docker tag "${{ matrix.service }}:${{ github.sha }}" "${ECR_IMAGE}"
+          docker push "${ECR_IMAGE}"
+
   pre-deploy-double-check:
     name: Final Pre-Deploy Double Check
     if: github.event_name == 'workflow_dispatch'
